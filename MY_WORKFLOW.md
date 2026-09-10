@@ -1,0 +1,69 @@
+# My D3D12 fix — personal workflow notes
+
+## What this is
+A fix for the ~7-month intermittent D3D12 freeze/crash on AMD (RX 6600 XT) that only
+reproduced via the editor's Play/Stop/Reload workflow. Root cause: Godot's editor killed
+Play-session child processes with a raw `TerminateProcess()` on Windows, giving the D3D12
+swap chain zero chance to release cleanly — repeated abrupt kills raced with the AMD driver's
+async cleanup of the fullscreen flip-model swap chain, eventually causing a multi-second
+stall or a `DXGI_ERROR_DEVICE_RESET` crash.
+
+Fix: added a batched, graceful-shutdown-first process termination path
+(`OS::kill_multiple()`), used by the editor's Play/Stop/Reload teardown, that asks the game
+window to close itself first (letting it release the swap chain normally) before falling
+back to a hard kill only if it doesn't exit in time.
+
+Fully tested: 20-30+ reload cycles with zero freezes, plus multi-instance stop timing and
+debugger-paused stop scenarios, all clean.
+
+## Repo setup
+- `origin` → real upstream `godotengine/godot` (for pulling updates — never push here, no access anyway)
+- `fork` → `https://github.com/JackHeinrich/godot` (mine — push here)
+- Fix lives on branch `fix/d3d12-editor-kill-freeze`, currently pushed to `fork`
+- Changed files: `core/os/os.h`, `core/os/os.cpp`, `platform/windows/os_windows.h`,
+  `platform/windows/os_windows.cpp`, `editor/run/editor_run.h`, `editor/run/editor_run.cpp`,
+  `editor/debugger/editor_debugger_node.h`, `editor/debugger/editor_debugger_node.cpp`
+
+## PR status
+Not yet opened. When ready: open a PR from `fork:fix/d3d12-editor-kill-freeze` targeting
+`godotengine/godot:master` (GitHub gave a direct link after the first push:
+`https://github.com/JackHeinrich/godot/pull/new/fix/d3d12-editor-kill-freeze`).
+Double-check the "base repository" is `godotengine/godot` before submitting.
+
+If it's accepted: the fix will exist in real Godot's `master`. At that point, stop using
+this branch and just build plain `origin/master` going forward.
+
+If it's not accepted (or while waiting): keep using this branch indefinitely, see below.
+
+## Keeping this branch updated with upstream Godot
+```
+git checkout fix/d3d12-editor-kill-freeze
+git fetch origin
+git merge origin/master
+```
+If git reports conflicts: resolve them in the flagged files, then `git add <file>` each
+resolved file and `git commit` to finish the merge. Normal merge conflict resolution,
+nothing special about it.
+
+(Merge, not rebase — keeps this simple with no force-pushing ever required.)
+
+## Building
+Git Bash:
+```
+cd /c/Users/JackH/Desktop/godot
+python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j$(nproc)
+```
+
+PowerShell:
+```
+cd C:\Users\JackH\Desktop\godot
+python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j$env:NUMBER_OF_PROCESSORS
+```
+
+Output binaries (in `bin\`):
+- `godot.windows.editor.dev.x86_64.console.exe` — has a console window for print/debug output
+- `godot.windows.editor.dev.x86_64.exe` — same thing, no console window, normal daily use
+
+Run either directly as the editor. A small merge rebuilds in well under a couple minutes;
+a merge that touches broad core headers can take several minutes — that's normal, just
+let it finish.
