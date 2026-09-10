@@ -245,6 +245,16 @@ ScriptEditorDebugger *EditorDebuggerNode::get_debugger(int p_id) const {
 	return Object::cast_to<ScriptEditorDebugger>(tabs->get_tab_control(p_id));
 }
 
+bool EditorDebuggerNode::is_process_paused(ProcessID p_pid) const {
+	for (int i = 0; i < tabs->get_tab_count(); i++) {
+		const ScriptEditorDebugger *debugger = Object::cast_to<ScriptEditorDebugger>(tabs->get_tab_control(i));
+		if (debugger && debugger->get_remote_pid() == p_pid && debugger->is_breaked()) {
+			return true;
+		}
+	}
+	return false;
+}
+
 ScriptEditorDebugger *EditorDebuggerNode::get_previous_debugger() const {
 	return Object::cast_to<ScriptEditorDebugger>(tabs->get_tab_control(tabs->get_previous_tab()));
 }
