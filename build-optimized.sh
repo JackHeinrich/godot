@@ -17,7 +17,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 BRANCH=$(git rev-parse --abbrev-ref HEAD | tr '/' '-')
 
 echo "Building branch: $BRANCH (optimized build)"
-python -m SCons platform=windows target=editor d3d12=yes accesskit=no lto=full -j"$(nproc)"
+python -m SCons platform=windows target=editor d3d12=yes accesskit=no lto=full winrt=no -j"$(nproc)"
 
 for suffix in "" ".console"; do
     src="bin/godot.windows.editor.x86_64${suffix}.exe"

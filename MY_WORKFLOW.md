@@ -126,11 +126,19 @@ missing (e.g. freshly on a `fix/*` branch and want a one-off build there), fall 
 raw commands they wrap:
 ```
 # dev build
-python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j$(nproc)
+python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes winrt=no -j$(nproc)
 # optimized build
-python -m SCons platform=windows target=editor d3d12=yes accesskit=no lto=full -j$(nproc)
+python -m SCons platform=windows target=editor d3d12=yes accesskit=no lto=full winrt=no -j$(nproc)
 ```
 (PowerShell: replace `$(nproc)` with `$env:NUMBER_OF_PROCESSORS`.)
+
+**`winrt=no` is required on this machine** (only Windows SDK `10.0.22000.0` is installed;
+Godot's WinRT/OneCore-TTS support needs `10.0.22621.0`+). This only started mattering after
+the 2026-09-11 rebase onto `4.7.2-stable` -- that line's `platform/windows/detect.py` differs
+a lot from dev/master's and enforces this SDK check where `winrt` defaults on. Without
+`winrt=no`, the build fails almost instantly during SCons config (`Reading SConscript
+files...` then an SDK error), before any real compile output -- if that ever recurs, that's
+the first thing to check, not a runtime crash.
 
 A small merge rebuilds in well under a couple minutes with `build-dev.sh`; a merge that
 touches broad core headers can take several minutes, and `build-optimized.sh` (LTO) takes
