@@ -19,10 +19,29 @@ debugger-paused stop scenarios, all clean.
 ## Repo setup
 - `origin` → real upstream `godotengine/godot` (for pulling updates — never push here, no access anyway)
 - `fork` → `https://github.com/JackHeinrich/godot` (mine — push here)
-- Fix lives on branch `fix/d3d12-editor-kill-freeze`, currently pushed to `fork`
-- Changed files: `core/os/os.h`, `core/os/os.cpp`, `platform/windows/os_windows.h`,
-  `platform/windows/os_windows.cpp`, `editor/run/editor_run.h`, `editor/run/editor_run.cpp`,
-  `editor/debugger/editor_debugger_node.h`, `editor/debugger/editor_debugger_node.cpp`
+- `master` (local) → stays a pure, untouched mirror of `origin/master`. Never commit here.
+- `fix/d3d12-editor-kill-freeze` → the actual PR branch, branched off `master`. Contains only
+  the fix, nothing personal. Currently pushed to `fork`. Any *new* future fix/feature also
+  gets its own fresh branch off `master`, same pattern.
+- `workspace` → my personal daily-driver branch. Branched off `master`, has
+  `fix/d3d12-editor-kill-freeze` merged into it, plus `MY_WORKFLOW.md` and `build.sh`
+  committed directly on it (deliberately, since this branch is never PR'd — see below).
+  Pushed to `fork` for backup. This is the branch I actually build and use day to day.
+- Changed files (the actual fix, on `fix/d3d12-editor-kill-freeze`): `core/os/os.h`,
+  `core/os/os.cpp`, `platform/windows/os_windows.h`, `platform/windows/os_windows.cpp`,
+  `editor/run/editor_run.h`, `editor/run/editor_run.cpp`, `editor/debugger/editor_debugger_node.h`,
+  `editor/debugger/editor_debugger_node.cpp`
+
+## Personal files (this one, build.sh, CLAUDE.md)
+These are committed for real, but only on `workspace` -- never on `master` or any `fix/*`
+branch. Since `master`/`fix/*` never had them in history to begin with, switching to either
+just makes git remove them from the working folder automatically (nothing to configure,
+no ignore rules needed); switching back to `workspace` brings them right back. So: they're
+only visible/editable while checked out on `workspace`, and they can never end up in a PR,
+since a PR only ever comes from a `fix/*` branch's own history.
+
+New personal files should be added the same way: create the file, `git add` + commit it
+while on `workspace`. Never add personal files to `master` or a `fix/*` branch.
 
 ## PR status
 Not yet opened. When ready: open a PR from `fork:fix/d3d12-editor-kill-freeze` targeting
