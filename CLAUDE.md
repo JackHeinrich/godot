@@ -11,9 +11,12 @@ the full technical writeup). It is being contributed upstream as a pull request.
   off `master`. Contain only the actual fix being contributed, nothing personal. These get
   pushed to `fork` (`https://github.com/JackHeinrich/godot`) and PR'd to
   `godotengine/godot:master`.
-- `workspace` → Jack's personal daily-driver branch. Branched off `master`, has the fix
-  branch(es) merged in, plus personal files (`MY_WORKFLOW.md`, `build.sh`, this file)
-  committed directly on it. Never PR'd. This is what actually gets built and used day to day.
+- `workspace` → Jack's personal daily-driver branch. Built on top of the latest `X.Y-stable`
+  Godot release tag (currently `4.7.2-stable`) rather than `master`/dev, since running
+  unfinished dev builds day to day isn't worth it — see `MY_WORKFLOW.md` for how/why. Has the
+  fix branch(es) ported in, plus personal files (`MY_WORKFLOW.md`, `build-dev.sh`,
+  `build-optimized.sh`, this file) committed directly on it. Never PR'd. This is what
+  actually gets built and used day to day.
 
 Personal files belong only on `workspace`. Never commit them to `master` or a `fix/*`
 branch — the whole point of this structure is that PR branches stay clean automatically.

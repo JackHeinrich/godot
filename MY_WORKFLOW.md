@@ -29,8 +29,8 @@ debugger-paused stop scenarios, all clean.
 - `workspace` → my personal daily-driver branch. **Not** based on `master`/dev anymore — as
   of 2026-09-11, rebased to build on top of the `4.7.2-stable` tag (the latest actual stable
   Godot release) instead, since running unfinished 4.8-dev day to day wasn't worth it. Has
-  the d3d12 fix commit (ported onto the 4.7 codebase) plus `MY_WORKFLOW.md`/`build.sh`/
-  `CLAUDE.md` committed directly on it (deliberately, since this branch is never PR'd — see
+  the d3d12 fix commit (ported onto the 4.7 codebase) plus `MY_WORKFLOW.md`/`build-dev.sh`/
+  `build-optimized.sh`/`CLAUDE.md` committed directly on it (deliberately, since this branch is never PR'd — see
   below). Pushed to `fork` for backup (force-pushed, since it was rebased — see "Updating"
   below for why that's expected here). This is the branch I actually build and use day to day.
 - Changed files (the actual fix, on `fix/d3d12-editor-kill-freeze`, and ported onto
@@ -42,7 +42,7 @@ debugger-paused stop scenarios, all clean.
     *after* the 4.7 branch split — it doesn't exist on the 4.7 line and isn't part of this
     fix. Only `is_process_paused()` in that file is actually the fix's addition.
 
-## Personal files (this one, build.sh, CLAUDE.md)
+## Personal files (this one, build-dev.sh, build-optimized.sh, CLAUDE.md)
 These are committed for real, but only on `workspace` -- never on `master` or any `fix/*`
 branch. Since `master`/`fix/*` never had them in history to begin with, switching to either
 just makes git remove them from the working folder automatically (nothing to configure,
@@ -104,22 +104,34 @@ dev-only function that happened to sit next to the fix's actual change; check wh
 of a conflict is really adding before keeping both).
 
 ## Building
-Just run, from Git Bash, in the repo root:
+Two build scripts, from Git Bash, in the repo root -- pick based on what you're doing:
+
 ```
-./build.sh
+./build-dev.sh          # debug/dev build: unoptimized, keeps DEV_ENABLED assertions + debug info
+./build-optimized.sh    # release-style build: full optimization + LTO, no dev assertions
 ```
-This runs the full SCons build and then copies the result into branch-prefixed filenames in
-`bin\`, e.g. `workspace-godot.windows.editor.dev.x86_64.exe` when built from `workspace`, so
-builds from different branches don't overwrite each other and stay easy to tell apart. Run
+
+`build-dev.sh` is slower to run (noticeably slower editor/game than the official download --
+that's normal, not a bug) but is what makes bugs actually debuggable; it's what was used to
+track down and verify the D3D12 freeze fix. `build-optimized.sh` compiles slower but the
+resulting binary runs close to official-release speed -- use it when you just want to play
+with the fix included, not debug something. Both copy their result into branch-prefixed
+filenames in `bin\` (e.g. `workspace-godot.windows.editor.dev.x86_64.exe` from the dev script,
+`workspace-godot.windows.editor.opt.x86_64.exe` from the optimized one), so builds from
+different branches/build types don't overwrite each other and stay easy to tell apart. Run
 either the plain or `.console` (has a debug console window) version directly as the editor.
 
-`build.sh` itself only exists on `workspace` (see "Personal files" above) -- if it's ever
+These scripts only exist on `workspace` (see "Personal files" above) -- if either is ever
 missing (e.g. freshly on a `fix/*` branch and want a one-off build there), fall back to the
-raw command it wraps:
+raw commands they wrap:
 ```
+# dev build
 python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j$(nproc)
+# optimized build
+python -m SCons platform=windows target=editor d3d12=yes accesskit=no lto=full -j$(nproc)
 ```
 (PowerShell: replace `$(nproc)` with `$env:NUMBER_OF_PROCESSORS`.)
 
-A small merge rebuilds in well under a couple minutes; a merge that touches broad core
-headers can take several minutes — that's normal, just let it finish.
+A small merge rebuilds in well under a couple minutes with `build-dev.sh`; a merge that
+touches broad core headers can take several minutes, and `build-optimized.sh` (LTO) takes
+noticeably longer than either -- that's normal, just let it finish.
