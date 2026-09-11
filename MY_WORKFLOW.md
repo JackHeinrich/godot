@@ -54,11 +54,15 @@ this branch and just build plain `origin/master` going forward.
 
 If it's not accepted (or while waiting): keep using this branch indefinitely, see below.
 
-## Keeping this branch updated with upstream Godot
+## Keeping my daily build updated with upstream Godot
+Update `master`, then bring that into `workspace` (the branch I actually build/use) --
+never merge upstream directly into a `fix/*` PR branch, that would defeat the point of
+keeping it clean for review:
 ```
-git checkout fix/d3d12-editor-kill-freeze
-git fetch origin
-git merge origin/master
+git checkout master
+git pull origin master
+git checkout workspace
+git merge master
 ```
 If git reports conflicts: resolve them in the flagged files, then `git add <file>` each
 resolved file and `git commit` to finish the merge. Normal merge conflict resolution,
@@ -66,23 +70,28 @@ nothing special about it.
 
 (Merge, not rebase — keeps this simple with no force-pushing ever required.)
 
+If a `fix/*` PR branch itself needs to catch up with upstream (e.g. a reviewer asks, or it's
+gone stale) that's a separate, deliberate action: `git checkout fix/whatever` then
+`git merge origin/master` on that branch specifically -- don't do this routinely, only when
+actually needed for that PR.
+
 ## Building
-Git Bash:
+Just run, from Git Bash, in the repo root:
 ```
-cd /c/Users/JackH/Desktop/godot
+./build.sh
+```
+This runs the full SCons build and then copies the result into branch-prefixed filenames in
+`bin\`, e.g. `workspace-godot.windows.editor.dev.x86_64.exe` when built from `workspace`, so
+builds from different branches don't overwrite each other and stay easy to tell apart. Run
+either the plain or `.console` (has a debug console window) version directly as the editor.
+
+`build.sh` itself only exists on `workspace` (see "Personal files" above) -- if it's ever
+missing (e.g. freshly on a `fix/*` branch and want a one-off build there), fall back to the
+raw command it wraps:
+```
 python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j$(nproc)
 ```
+(PowerShell: replace `$(nproc)` with `$env:NUMBER_OF_PROCESSORS`.)
 
-PowerShell:
-```
-cd C:\Users\JackH\Desktop\godot
-python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j$env:NUMBER_OF_PROCESSORS
-```
-
-Output binaries (in `bin\`):
-- `godot.windows.editor.dev.x86_64.console.exe` — has a console window for print/debug output
-- `godot.windows.editor.dev.x86_64.exe` — same thing, no console window, normal daily use
-
-Run either directly as the editor. A small merge rebuilds in well under a couple minutes;
-a merge that touches broad core headers can take several minutes — that's normal, just
-let it finish.
+A small merge rebuilds in well under a couple minutes; a merge that touches broad core
+headers can take several minutes — that's normal, just let it finish.
