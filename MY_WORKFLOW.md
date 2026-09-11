@@ -19,18 +19,28 @@ debugger-paused stop scenarios, all clean.
 ## Repo setup
 - `origin` → real upstream `godotengine/godot` (for pulling updates — never push here, no access anyway)
 - `fork` → `https://github.com/JackHeinrich/godot` (mine — push here)
-- `master` (local) → stays a pure, untouched mirror of `origin/master`. Never commit here.
+- `master` (local) → stays a pure, untouched mirror of `origin/master` (upstream's dev
+  branch, currently working toward 4.8 — unfinished/unreleased). Never commit here. This is
+  purely the base for PR branches, since PRs target `godotengine/godot:master`.
 - `fix/d3d12-editor-kill-freeze` → the actual PR branch, branched off `master`. Contains only
   the fix, nothing personal. Currently pushed to `fork`. Any *new* future fix/feature also
-  gets its own fresh branch off `master`, same pattern.
-- `workspace` → my personal daily-driver branch. Branched off `master`, has
-  `fix/d3d12-editor-kill-freeze` merged into it, plus `MY_WORKFLOW.md` and `build.sh`
-  committed directly on it (deliberately, since this branch is never PR'd — see below).
-  Pushed to `fork` for backup. This is the branch I actually build and use day to day.
-- Changed files (the actual fix, on `fix/d3d12-editor-kill-freeze`): `core/os/os.h`,
-  `core/os/os.cpp`, `platform/windows/os_windows.h`, `platform/windows/os_windows.cpp`,
-  `editor/run/editor_run.h`, `editor/run/editor_run.cpp`, `editor/debugger/editor_debugger_node.h`,
-  `editor/debugger/editor_debugger_node.cpp`
+  gets its own fresh branch off `master`, same pattern. (This stays on the dev base — PRs to
+  upstream always target `master`, regardless of what `workspace` is built on below.)
+- `workspace` → my personal daily-driver branch. **Not** based on `master`/dev anymore — as
+  of 2026-09-11, rebased to build on top of the `4.7.2-stable` tag (the latest actual stable
+  Godot release) instead, since running unfinished 4.8-dev day to day wasn't worth it. Has
+  the d3d12 fix commit (ported onto the 4.7 codebase) plus `MY_WORKFLOW.md`/`build.sh`/
+  `CLAUDE.md` committed directly on it (deliberately, since this branch is never PR'd — see
+  below). Pushed to `fork` for backup (force-pushed, since it was rebased — see "Updating"
+  below for why that's expected here). This is the branch I actually build and use day to day.
+- Changed files (the actual fix, on `fix/d3d12-editor-kill-freeze`, and ported onto
+  `workspace`'s 4.7 base): `core/os/os.h`, `core/os/os.cpp`, `platform/windows/os_windows.h`,
+  `platform/windows/os_windows.cpp`, `editor/run/editor_run.h`, `editor/run/editor_run.cpp`,
+  `editor/debugger/editor_debugger_node.h`, `editor/debugger/editor_debugger_node.cpp`
+  - Note: `editor_debugger_node.h/.cpp` also declare `get_debugger_id()` on `master`/dev, but
+    that's an unrelated upstream feature (used by `script_editor_debugger.cpp`) that landed
+    *after* the 4.7 branch split — it doesn't exist on the 4.7 line and isn't part of this
+    fix. Only `is_process_paused()` in that file is actually the fix's addition.
 
 ## Personal files (this one, build.sh, CLAUDE.md)
 These are committed for real, but only on `workspace` -- never on `master` or any `fix/*`
@@ -55,25 +65,43 @@ this branch and just build plain `origin/master` going forward.
 If it's not accepted (or while waiting): keep using this branch indefinitely, see below.
 
 ## Keeping my daily build updated with upstream Godot
-Update `master`, then bring that into `workspace` (the branch I actually build/use) --
-never merge upstream directly into a `fix/*` PR branch, that would defeat the point of
-keeping it clean for review:
+
+**`workspace` tracks the 4.7 *stable release* line now, not `master`/dev.** To pick up a
+newer stable point release (e.g. when `4.7.3-stable` ships):
+```
+git fetch origin --tags
+git checkout workspace
+git merge 4.7.3-stable        # whatever the new tag is
+```
+This is a normal merge (linear stable-release history), so no force-push needed for this
+part. If git reports conflicts: resolve them in the flagged files, then `git add <file>` each
+resolved file and `git commit` to finish the merge.
+
+`master` still exists purely as the clean base for PR branches (see "Repo setup" above) and
+is unrelated to keeping `workspace` updated now. Update it only when preparing/rebasing a
+`fix/*` PR branch:
 ```
 git checkout master
 git pull origin master
-git checkout workspace
-git merge master
 ```
-If git reports conflicts: resolve them in the flagged files, then `git add <file>` each
-resolved file and `git commit` to finish the merge. Normal merge conflict resolution,
-nothing special about it.
+Never merge upstream directly into a `fix/*` PR branch's history in a way that pulls in
+unrelated commits — if a `fix/*` PR branch itself needs to catch up with upstream (e.g. a
+reviewer asks, or it's gone stale), that's a separate, deliberate action: `git checkout
+fix/whatever` then `git merge origin/master` on that branch specifically -- don't do this
+routinely, only when actually needed for that PR.
 
-(Merge, not rebase — keeps this simple with no force-pushing ever required.)
-
-If a `fix/*` PR branch itself needs to catch up with upstream (e.g. a reviewer asks, or it's
-gone stale) that's a separate, deliberate action: `git checkout fix/whatever` then
-`git merge origin/master` on that branch specifically -- don't do this routinely, only when
-actually needed for that PR.
+### Note: how `workspace` got moved from `master`/dev to `4.7.2-stable` (2026-09-11)
+`workspace` used to be branched off `master` (dev/4.8-unfinished). It was rebased onto the
+`4.7.2-stable` tag instead: `git rebase --onto 4.7.2-stable master workspace`, replaying the
+fix commit + personal-file commits on top of the 4.7 codebase, then force-pushed to `fork`.
+This was a one-time base change, not something to repeat routinely — see the merge-based
+update flow above for normal ongoing updates. If `workspace` ever needs to move to a
+*different* base again in the future (a new major/minor stable line, e.g. 4.8 once it's
+actually released), the same `git rebase --onto <new-base> <old-base> workspace` pattern
+applies, and conflicts in ported fix code should be checked carefully (a conflict can mean a
+real semantic clash, or — as happened here with `get_debugger_id()` — just an unrelated
+dev-only function that happened to sit next to the fix's actual change; check what each side
+of a conflict is really adding before keeping both).
 
 ## Building
 Just run, from Git Bash, in the repo root:
