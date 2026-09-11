@@ -126,19 +126,23 @@ missing (e.g. freshly on a `fix/*` branch and want a one-off build there), fall 
 raw commands they wrap:
 ```
 # dev build
-python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes winrt=no -j$(nproc)
+python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j$(nproc)
 # optimized build
-python -m SCons platform=windows target=editor d3d12=yes accesskit=no lto=full winrt=no -j$(nproc)
+python -m SCons platform=windows target=editor d3d12=yes accesskit=no lto=full -j$(nproc)
 ```
 (PowerShell: replace `$(nproc)` with `$env:NUMBER_OF_PROCESSORS`.)
 
-**`winrt=no` is required on this machine** (only Windows SDK `10.0.22000.0` is installed;
-Godot's WinRT/OneCore-TTS support needs `10.0.22621.0`+). This only started mattering after
-the 2026-09-11 rebase onto `4.7.2-stable` -- that line's `platform/windows/detect.py` differs
-a lot from dev/master's and enforces this SDK check where `winrt` defaults on. Without
-`winrt=no`, the build fails almost instantly during SCons config (`Reading SConscript
-files...` then an SDK error), before any real compile output -- if that ever recurs, that's
-the first thing to check, not a runtime crash.
+**Windows SDK note:** the 4.7.2-stable base (unlike dev/master) enforces a Windows SDK
+`10.0.22621.0`+ check whenever `winrt` is enabled (the default) -- dev/master's
+`platform/windows/detect.py` differs a lot and didn't hit this. This machine originally only
+had `10.0.22000.0`, which made both scripts fail almost instantly during SCons config
+(`Reading SConscript files...` then an SDK error, no real compile output) right after the
+2026-09-11 rebase onto 4.7.2-stable. Fixed properly by installing the Windows 11 SDK
+(`10.0.22621.0`) component via Visual Studio Installer -> Modify -> Individual components ->
+"Windows 11 SDK (10.0.22621.0)", rather than passing `winrt=no` -- so WinRT/OneCore-TTS
+support stays enabled. If this ever recurs (e.g. on a fresh machine without that SDK
+component), that's the first thing to check, not a runtime crash -- either install that SDK
+component, or pass `winrt=no` to both commands above as a quick workaround.
 
 A small merge rebuilds in well under a couple minutes with `build-dev.sh`; a merge that
 touches broad core headers can take several minutes, and `build-optimized.sh` (LTO) takes
