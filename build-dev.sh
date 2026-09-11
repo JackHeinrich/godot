@@ -12,11 +12,17 @@ set -e
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# Hardcoded, not just `python` on PATH: this machine has multiple Pythons (a miniconda
+# install and this one), and which one bare `python` resolves to depends on how/where the
+# shell was launched from (PowerShell vs Git Bash, VS Code terminal profile, etc). Only this
+# one has the SCons package installed -- see MY_WORKFLOW.md's Building section.
+PYTHON="/c/Users/JackH/AppData/Local/Programs/Python/Python310/python"
+
 # Slashes aren't valid in a single filename component (e.g. fix/d3d12-editor-kill-freeze).
 BRANCH=$(git rev-parse --abbrev-ref HEAD | tr '/' '-')
 
 echo "Building branch: $BRANCH (dev build)"
-python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j"$(nproc)"
+"$PYTHON" -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j"$(nproc)"
 
 for suffix in "" ".console"; do
     src="bin/godot.windows.editor.dev.x86_64${suffix}.exe"

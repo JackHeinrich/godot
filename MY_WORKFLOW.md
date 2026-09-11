@@ -104,11 +104,24 @@ dev-only function that happened to sit next to the fix's actual change; check wh
 of a conflict is really adding before keeping both).
 
 ## Building
-Two build scripts, from Git Bash, in the repo root -- pick based on what you're doing:
+Two build scripts, **from an actual Git Bash terminal**, in the repo root -- pick based on
+what you're doing:
 
 ```
 ./build-dev.sh          # debug/dev build: unoptimized, keeps DEV_ENABLED assertions + debug info
 ./build-optimized.sh    # release-style build: full optimization + LTO, no dev assertions
+```
+
+**Must be real Git Bash, not PowerShell/cmd** -- typing `./build-dev.sh` in PowerShell doesn't
+execute it as a bash script; Windows launches it via file association instead (a separate
+console that flashes open and closes, with no output PowerShell can capture/redirect,
+regardless of `>`/`2>&1`). In VS Code: terminal panel -> the `⌄` dropdown next to `+` -> **Git
+Bash** (not the PowerShell profile). If you must kick it off from PowerShell anyway, invoke
+Git's bash by its full path, not bare `bash` -- on this machine plain `bash` on PowerShell's
+PATH resolves to Windows' WSL stub (`C:\Windows\System32\bash.exe`) first, which fails with a
+WSL relay error since WSL itself isn't set up here:
+```powershell
+& "C:\Program Files\Git\bin\bash.exe" ./build-dev.sh
 ```
 
 `build-dev.sh` is slower to run (noticeably slower editor/game than the official download --
@@ -123,14 +136,24 @@ either the plain or `.console` (has a debug console window) version directly as 
 
 These scripts only exist on `workspace` (see "Personal files" above) -- if either is ever
 missing (e.g. freshly on a `fix/*` branch and want a one-off build there), fall back to the
-raw commands they wrap:
+raw commands they wrap. Use the same explicit Python they hardcode (see next paragraph for
+why), not bare `python`:
 ```
 # dev build
-python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j$(nproc)
+/c/Users/JackH/AppData/Local/Programs/Python/Python310/python -m SCons platform=windows target=editor dev_build=yes d3d12=yes accesskit=no use_pix=yes -j$(nproc)
 # optimized build
-python -m SCons platform=windows target=editor d3d12=yes accesskit=no lto=full -j$(nproc)
+/c/Users/JackH/AppData/Local/Programs/Python/Python310/python -m SCons platform=windows target=editor d3d12=yes accesskit=no lto=full -j$(nproc)
 ```
-(PowerShell: replace `$(nproc)` with `$env:NUMBER_OF_PROCESSORS`.)
+(PowerShell: replace `$(nproc)` with `$env:NUMBER_OF_PROCESSORS`, and the path with
+`C:\Users\JackH\AppData\Local\Programs\Python\Python310\python.exe`.)
+
+**Multiple Pythons on this machine:** there's also a miniconda install
+(`C:\Users\JackH\miniconda3\python.exe`) without the `SCons` package, and which one bare
+`python` resolves to depends on how the shell was launched (PowerShell vs Git Bash, VS Code
+terminal profile, etc) -- it's not consistent. Fails as `ModuleNotFoundError: No module named
+SCons` if the wrong one wins. Both build scripts hardcode the Python310 path above for exactly
+this reason; if that path ever needs to change (Python reinstalled/upgraded), update it in
+both scripts and here.
 
 **Windows SDK note:** the 4.7.2-stable base (unlike dev/master) enforces a Windows SDK
 `10.0.22621.0`+ check whenever `winrt` is enabled (the default) -- dev/master's
